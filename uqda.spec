@@ -33,7 +33,7 @@ The optional UQDA gateway helper configures a NetworkManager-based home or
 hardened cafe access point and advertises the node's routed UQDA IPv6 prefix.
 
 %prep
-%autosetup -c -n %{name}-%{version}
+%autosetup -n %{name}-v%{version}-vendored-source
 
 %build
 export CGO_ENABLED=0
