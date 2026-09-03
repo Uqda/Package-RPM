@@ -73,3 +73,31 @@ jobs:
           set -euo pipefail
           SRPM=$(find source-rpm -maxdepth 1 -name '*.src.rpm' -print -quit)
           copr-cli build maher-xs/uqda "${SRPM}"
+
+  verify:
+    name: Verify COPR install (${{ matrix.image }})
+    needs: publish
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [fedora:43, fedora:44]
+    container: ${{ matrix.image }}
+    steps:
+      - name: Enable COPR and install published packages
+        run: |
+          dnf -y install dnf5-plugins
+          dnf -y copr enable maher-xs/uqda
+          dnf -y install uqda uqda-gateway
+      - name: Verify installed payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          uqda -version | grep -F 'Build version: 0.1.4'
+          uqdactl -version | grep -F 'Build version: 0.1.4'
+          test -x /usr/bin/uqda-latency
+          test -x /usr/bin/uqda-gateway
+          systemd-analyze verify \
+            /usr/lib/systemd/system/uqda.service \
+            /usr/lib/systemd/system/uqda-default-config.service
+          rpm -V uqda uqda-gateway

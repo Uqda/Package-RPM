@@ -11,6 +11,22 @@ Core release and forces Go's offline vendor mode. It produces:
 - `uqda-gateway`: optional NetworkManager gateway integration;
 - a source RPM.
 
+## Install from Fedora COPR
+
+```sh
+sudo dnf install -y dnf5-plugins
+sudo dnf copr enable maher-xs/uqda
+sudo dnf install uqda
+sudo systemctl enable --now uqda
+sudo uqdactl doctor
+```
+
+Install the optional gateway helper with:
+
+```sh
+sudo dnf install uqda-gateway
+```
+
 ## Local build on Fedora
 
 ```sh
@@ -22,8 +38,9 @@ sudo dnf install -y rpm-build rpmdevtools rpmlint golang systemd-rpm-macros curl
 Artifacts are written to `artifacts/`. Inspect and install the main package:
 
 ```sh
-./tests/inspect-rpm.sh artifacts/uqda-*.rpm
-sudo dnf install ./artifacts/uqda-*.rpm
+MAIN_RPM=$(find artifacts -name 'uqda-[0-9]*.rpm' ! -name '*.src.rpm' -print -quit)
+./tests/inspect-rpm.sh "$MAIN_RPM"
+sudo dnf install "./$MAIN_RPM"
 sudo systemctl enable --now uqda
 sudo uqdactl doctor
 ```
