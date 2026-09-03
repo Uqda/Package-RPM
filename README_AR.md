@@ -16,12 +16,20 @@ sudo dnf install -y rpm-build rpmdevtools rpmlint golang systemd-rpm-macros curl
 ./scripts/build-rpm.sh
 ```
 
-## التثبيت
+## التثبيت من Fedora COPR
 
 ```sh
-sudo dnf install ./artifacts/uqda-*.rpm
+sudo dnf install -y dnf5-plugins
+sudo dnf copr enable maher-xs/uqda
+sudo dnf install uqda
 sudo systemctl enable --now uqda
 sudo uqdactl doctor
+```
+
+ولإضافة أدوات البوابة الاختيارية:
+
+```sh
+sudo dnf install uqda-gateway
 ```
 
 يُنشأ `/etc/uqda.conf` بصلاحية `0600`. لا تحذف الحزمة هذا الملف عند التحديث
