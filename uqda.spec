@@ -7,6 +7,10 @@ License:        LGPL-3.0-only WITH LicenseRef-UQDA-Static-Linking-Exception
 URL:            https://github.com/Uqda/Core
 Source0:        https://github.com/Uqda/Core/releases/download/v%{version}/uqda-v%{version}-vendored-source.tar.gz
 
+# UQDA is built as a pure-Go, CGO-disabled binary. Fedora's debuginfo generator
+# otherwise emits an empty debugsource package and fails the build.
+%global debug_package %{nil}
+
 BuildRequires:  golang >= 1.25.13
 BuildRequires:  systemd-rpm-macros
 Requires:       iproute
