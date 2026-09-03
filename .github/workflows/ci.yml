@@ -22,7 +22,9 @@ jobs:
       - name: Install build tools
         run: dnf -y install rpm-build rpmdevtools rpmlint golang systemd-rpm-macros curl git
       - name: Static specification gate
-        run: ./tests/spec-static.sh
+        run: |
+          ./tests/spec-static.sh
+          sh ./tests/copr-workflow-static.sh
       - name: RPM lint
         run: rpmlint uqda.spec
       - name: Build binary and source RPMs
