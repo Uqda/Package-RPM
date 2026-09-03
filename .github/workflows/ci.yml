@@ -1,0 +1,54 @@
+name: RPM Release Gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rpm-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and inspect Fedora RPM
+    runs-on: ubuntu-latest
+    container: fedora:44
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install build tools
+        run: dnf -y install rpm-build rpmdevtools rpmlint golang systemd-rpm-macros curl git
+      - name: Static specification gate
+        run: ./tests/spec-static.sh
+      - name: RPM lint
+        run: rpmlint uqda.spec
+      - name: Build binary and source RPMs
+        run: ./scripts/build-rpm.sh
+      - name: Inspect payload
+        run: ./tests/inspect-rpm.sh "$(find artifacts -name 'uqda-[0-9]*.rpm' ! -name '*.src.rpm' -print -quit)"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: rpm-candidates
+          path: artifacts/*.rpm
+          if-no-files-found: error
+
+  lifecycle:
+    name: Install lifecycle (${{ matrix.image }})
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [fedora:43, fedora:44, rockylinux:9, almalinux:9]
+    container: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
+        with:
+          name: rpm-candidates
+          path: artifacts
+      - name: Install lifecycle and identity preservation
+        run: ./tests/install-lifecycle.sh "$(find artifacts -name 'uqda-[0-9]*.rpm' ! -name '*.src.rpm' -print -quit)"
