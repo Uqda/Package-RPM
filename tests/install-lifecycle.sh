@@ -7,7 +7,7 @@ VERSION=$(cat "$(dirname "$0")/../VERSION")
 dnf -y install "$RPM"
 uqda -version | grep -F "Build version: $VERSION"
 uqdactl -version | grep -F "Build version: $VERSION"
-uqda-latency --help >/dev/null
+uqda-latency ::1 --help >/dev/null
 systemd-analyze verify /usr/lib/systemd/system/uqda.service /usr/lib/systemd/system/uqda-default-config.service
 
 umask 077
