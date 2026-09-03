@@ -23,11 +23,12 @@ jobs:
       id-token: write
       attestations: write
     steps:
+      - name: Install release tools
+        run: dnf -y install rpm-build rpmdevtools rpmlint golang systemd-rpm-macros curl git gh
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: Install release tools
-        run: dnf -y install rpm-build rpmdevtools rpmlint golang systemd-rpm-macros curl git gh cosign
+      - uses: sigstore/cosign-installer@v3
       - name: Verify release identity
         id: version
         shell: bash
