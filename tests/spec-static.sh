@@ -5,8 +5,10 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 VERSION=$(cat "$ROOT/VERSION")
 RELEASE=$(cat "$ROOT/RELEASE")
 
-test "$(rpmspec -q --qf '%{VERSION}' "$ROOT/uqda.spec")" = "$VERSION"
-case "$(rpmspec -q --qf '%{RELEASE}' "$ROOT/uqda.spec")" in "$RELEASE"*) : ;; *) exit 1 ;; esac
+SPEC_VERSION=$(rpmspec -q --qf '%{NAME} %{VERSION}\n' "$ROOT/uqda.spec" | awk '$1 == "uqda" { print $2 }')
+SPEC_RELEASE=$(rpmspec -q --qf '%{NAME} %{RELEASE}\n' "$ROOT/uqda.spec" | awk '$1 == "uqda" { print $2 }')
+test "$SPEC_VERSION" = "$VERSION" || { echo "spec VERSION mismatch: $SPEC_VERSION" >&2; exit 1; }
+case "$SPEC_RELEASE" in "$RELEASE"*) : ;; *) echo "spec RELEASE mismatch: $SPEC_RELEASE" >&2; exit 1 ;; esac
 grep -Fq 'uqda-v%{version}-vendored-source.tar.gz' "$ROOT/uqda.spec"
 grep -Fq '%{_unitdir}/uqda.service' "$ROOT/uqda.spec"
 grep -Fq 'install -Dpm 0644 contrib/systemd/uqda.service' "$ROOT/uqda.spec"
