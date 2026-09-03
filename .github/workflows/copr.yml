@@ -1,0 +1,58 @@
+name: Publish to Fedora COPR
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing Package-RPM release tag
+        required: true
+        default: v0.1.4-1
+
+permissions:
+  contents: read
+
+concurrency:
+  group: copr-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build maher-xs/uqda
+    runs-on: ubuntu-latest
+    container: fedora:44
+    env:
+      COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - name: Install publishing tools
+        run: dnf -y install copr-cli gh
+      - name: Configure COPR credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${COPR_CONFIG}" || {
+            echo "COPR_CONFIG repository secret is not configured" >&2
+            exit 1
+          }
+          install -d -m 0700 "${HOME}/.config"
+          printf '%s\n' "${COPR_CONFIG}" > "${HOME}/.config/copr"
+          chmod 0600 "${HOME}/.config/copr"
+      - name: Download the released source RPM
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir source-rpm
+          gh release download "${RELEASE_TAG}" \
+            --repo Uqda/Package-RPM \
+            --pattern '*.src.rpm' \
+            --dir source-rpm
+          test "$(find source-rpm -maxdepth 1 -name '*.src.rpm' | wc -l)" -eq 1
+      - name: Build and publish in COPR
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRPM=$(find source-rpm -maxdepth 1 -name '*.src.rpm' -print -quit)
+          copr-cli build maher-xs/uqda "${SRPM}"
