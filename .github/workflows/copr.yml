@@ -3,6 +3,9 @@ name: Publish to Fedora COPR
 on:
   release:
     types: [published]
+  push:
+    branches:
+      - 'copr/v[0-9]+.[0-9]+.[0-9]+-[0-9]+'
   workflow_dispatch:
     inputs:
       tag:
@@ -14,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: copr-${{ github.event.release.tag_name || inputs.tag }}
+  group: copr-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -40,6 +43,20 @@ jobs:
           install -d -m 0700 "${HOME}/.config"
           printf '%s\n' "${COPR_CONFIG}" > "${HOME}/.config/copr"
           chmod 0600 "${HOME}/.config/copr"
+      - name: Resolve and verify the release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${RELEASE_TAG:-}"
+          if [ -z "${TAG}" ]; then
+            TAG="${GITHUB_REF_NAME#copr/}"
+          fi
+          case "${TAG}" in
+            v[0-9]*.[0-9]*.[0-9]*-[0-9]*) ;;
+            *) echo "invalid Package-RPM release tag: ${TAG}" >&2; exit 1 ;;
+          esac
+          gh release view "${TAG}" --repo Uqda/Package-RPM >/dev/null
+          echo "RELEASE_TAG=${TAG}" >> "${GITHUB_ENV}"
       - name: Download the released source RPM
         shell: bash
         run: |
