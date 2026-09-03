@@ -12,7 +12,7 @@ case "$SPEC_RELEASE" in "$RELEASE"*) : ;; *) echo "spec RELEASE mismatch: $SPEC_
 grep -Fq 'uqda-v%{version}-vendored-source.tar.gz' "$ROOT/uqda.spec"
 grep -Fq '%{_unitdir}/uqda.service' "$ROOT/uqda.spec"
 grep -Fq 'install -Dpm 0644 contrib/systemd/uqda.service' "$ROOT/uqda.spec"
-grep -Fq 'GOFLAGS="-mod=vendor -trimpath"' "$ROOT/uqda.spec"
+grep -Fq 'GOFLAGS="-mod=vendor -trimpath -buildvcs=false"' "$ROOT/uqda.spec"
 grep -Fq 'golang >= 1.25.13' "$ROOT/uqda.spec"
 grep -Fq 'uqda-gateway' "$ROOT/uqda.spec"
 grep -Fq 'uqda-latency' "$ROOT/uqda.spec"

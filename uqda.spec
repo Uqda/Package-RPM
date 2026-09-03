@@ -41,7 +41,7 @@ hardened cafe access point and advertises the node's routed UQDA IPv6 prefix.
 
 %build
 export CGO_ENABLED=0
-export GOFLAGS="-mod=vendor -trimpath"
+export GOFLAGS="-mod=vendor -trimpath -buildvcs=false"
 export PKGNAME="uqda"
 export PKGVER="%{version}"
 ./build -t -p
@@ -56,7 +56,7 @@ install -Dpm 0644 contrib/systemd/uqda-default-config.service %{buildroot}%{_uni
 
 %check
 export CGO_ENABLED=0
-export GOFLAGS="-mod=vendor -trimpath"
+export GOFLAGS="-mod=vendor -trimpath -buildvcs=false"
 go test ./...
 ./uqda -version | grep -F "Build version: %{version}"
 ./uqdactl -version | grep -F "Build version: %{version}"
