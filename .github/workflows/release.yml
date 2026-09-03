@@ -1,0 +1,78 @@
+name: Official RPM Release
+
+on:
+  push:
+    branches:
+      - 'release/v[0-9]+.[0-9]+.[0-9]+-[0-9]+'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rpm-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: Build, verify and publish
+    runs-on: ubuntu-latest
+    container: fedora:44
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Install release tools
+        run: dnf -y install rpm-build rpmdevtools rpmlint golang systemd-rpm-macros curl git gh
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: sigstore/cosign-installer@v3
+      - name: Verify release identity
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(cat VERSION)
+          RELEASE=$(cat RELEASE)
+          TAG="v${VERSION}-${RELEASE}"
+          test "${GITHUB_REF_NAME}" = "release/${TAG}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "release tag already exists: ${TAG}" >&2
+            exit 1
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+      - name: Run specification and lint gates
+        run: |
+          ./tests/spec-static.sh
+          rpmlint uqda.spec
+      - name: Build RPMs
+        run: ./scripts/build-rpm.sh
+      - name: Inspect main RPM
+        run: ./tests/inspect-rpm.sh "$(find artifacts -name 'uqda-[0-9]*.rpm' ! -name '*.src.rpm' -print -quit)"
+      - name: Generate checksums
+        working-directory: artifacts
+        run: sha256sum *.rpm > SHA256SUMS
+      - name: Sign checksums with GitHub OIDC
+        working-directory: artifacts
+        run: cosign sign-blob --yes --bundle SHA256SUMS.sigstore.json SHA256SUMS
+      - uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: artifacts/*.rpm
+      - name: Create immutable tag and release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "UQDA RPM $TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$TAG"
+          gh release create "$TAG" artifacts/* \
+            --verify-tag \
+            --title "UQDA RPM $TAG" \
+            --notes-file CHANGELOG.md
